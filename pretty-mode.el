@@ -2,18 +2,18 @@
 ;;; -*- coding: utf-8 -*-
 
 ;;; Commentary:
-;; 
+;;
 ;; Minor mode for redisplaying parts of the buffer as pretty symbols
 ;; originally modified from Trent Buck's version at http://paste.lisp.org/display/42335,2/raw
 ;; Also includes code from `sml-mode'
 ;; See also http://www.emacswiki.org/cgi-bin/wiki/PrettyLambda
-;; 
+;;
 ;; Released under the GPL. No implied warranties, etc. Use at your own risk.
 ;; Arthur Danskin <arthurdanskin@gmail.com>, March 2008
 ;;
 ;; to install:
 ;; (require 'pretty-mode)
-;; and 
+;; and
 ;; (global-pretty-mode 1)
 ;; or
 ;; (add-hook 'my-pretty-language-hook 'turn-on-pretty-mode)
@@ -29,7 +29,7 @@
 (defun pretty-font-lock-compose-symbol (alist)
   "Compose a sequence of ascii chars into a symbol."
   (let* ((start (match-beginning 0))
-	 (end (match-end 0))
+         (end (match-end 0))
          (syntax (char-syntax (char-after start))))
     (if (or (if (memq syntax pretty-syntax-types)
                 (or (memq (char-syntax (char-before start)) pretty-syntax-types)
@@ -130,7 +130,7 @@ expected by `pretty-patterns'"
                       (let* ((mode (intern (concat (symbol-name mode)
                                                    "-mode")))
                              (assoc-pair (assoc mode pretty-patterns))
-                            
+
                              (entry (cons regexp glyph)))
                         (if assoc-pair
                             (push entry (cdr assoc-pair))
@@ -140,37 +140,56 @@ expected by `pretty-patterns'"
 
 (defvar pretty-patterns
   (let* ((lispy '(scheme emacs-lisp lisp))
-         (mley '(tuareg haskell sml))
+         (mley '(tuareg haskell sml coq))
          (c-like '(c c++ perl sh python java ess ruby))
-         (all (append lispy mley c-like (list 'octave))))
+         (all (append lispy mley c-like '(octave latex))))
     (pretty-compile-patterns
      `(
-       (?≠ ("!=" ,@c-like scheme octave)
+       (?≠ ("!=" ,@c-like scheme octave coq)
            ("<>" tuareg octave)
            ("~=" octave)
-           ("/=" haskell emacs-lisp))
-       (?≤ ("<=" ,@all))
-       (?≥ (">=" ,@all))
-       (?← ("<-" ,@mley ess))
-       (?➛ ("->" ,@mley ess c c++ perl))
-       (?↑ ("\\^" tuareg))
-       (?⟹ ("=>" sml perl ruby haskell))
+           ("/=" haskell emacs-lisp)
+           ("\\neq" latex))
+       (?≤ ("<=" ,@all)
+           ("\\leq" latex))
+       (?≥ (">=" ,@all)
+           ("\\geq" latex))
+       (?⟵ ("<-" ,@mley ess)
+           ("\\leftarrow" latex))
+       (?⟶ ("->" ,@mley ess c c++ perl)
+           ("\\rightarrow" latex))
+       (?↑ ("\\^" tuareg)
+           ("^+" coq))
+       (?⟹ ("=>" sml perl ruby haskell coq)
+           ("\\Rightarrow" latex))
+       (?⟷ ("<->" coq)
+           ("\leftrightarrow" latex))
        (?∅ ("nil" emacs-lisp ruby)
            ("null" scheme java)
            ("NULL" c c++)
            ("None" python)
+           ("set0" coq)
            ("()" ,@mley))
        (?… ("\.\.\." scheme)
-           ("\.\." haskell))
+           ("\.\." haskell)
+           ("\\ldots" latex))
 ;;;    (?∀ ("List.for_all" tuareg))
 ;;;    (?∃ ("List.exists" tuareg))
 ;;;    (?∈ ("List.mem" tuareg)
 ;;;        ("member" ,@lispy))
 ;;;    (?∉ ())
-       (?∈ ("in" python))
-       (?∉ ("not in" python))
+       (?∈ ("in" python)
+           ("\\in" coq latex))
+       (?∉ ("not in" python)
+           ("\\notin" coq latex))
+       (?⊲ ("<|" coq))
        (?√ ("sqrt" ,@all))
-       (?∑ ("sum" python))
+       (?∑ ("sum" python)
+           ("\\sum" coq)
+           ("\\Sigma" latex))
+       (?∪ (":|:" coq))
+       (?∩ (":&:" coq))
+       (?∁ ("~:" coq))
        (?α ("alpha" ,@all)
            ("'a" ,@mley))
        (?β ("beta" ,@all)
@@ -180,6 +199,7 @@ expected by `pretty-patterns'"
        (?Δ ("delta" ,@all)
            ("'d" ,@mley))
        (?ε ("epsilon" ,@all))
+       (?ι ("iota" ,@all))
        (?θ ("theta" ,@all))
        (?λ ("lambda" ,@all)
 ;;;        ("case-\\(lambda\\)" scheme)
@@ -188,6 +208,11 @@ expected by `pretty-patterns'"
            ("\\" haskell))
        (?π ("pi" ,@all)
            ("M_PI" c c++))
+       (?Π ("Pi" @all))
+       (?ω ("omega" @all))
+       (?Φ ("Phi" @all))
+       (?Ω ("Ohm" @all))
+       (?℧ ("Mho" @all))
        (?φ ("phi" ,@all))
 
        (?² ("**2" python tuareg octave)
@@ -195,7 +220,7 @@ expected by `pretty-patterns'"
        (?³ ("**3" python tuareg octave)
            ("^3" octave haskell))
        (?ⁿ ("**n" python tuareg octave)
-           ("^n" octave haskell))
+           ("^n" octave haskell coq))
 
     ;; (?₀ ("[0]" ,@c-like)
     ;;     ("(0)" octave)
@@ -214,6 +239,7 @@ expected by `pretty-patterns'"
     ;;     (".(4)" tuareg))
 
        (?∞ ("HUGE_VAL" c c++))
+       (?∎ ("Qed." coq))
 
 ;;;    (?∙ ())
 ;;;    (?× ())
@@ -228,18 +254,36 @@ expected by `pretty-patterns'"
 ;;;    (?₈ ("[8]") ,@c-like)
 ;;;    (?₉ ("[9]") ,@c-like)
 
+       (?⋂ ("\\bigcap" coq))
+       (?∏ ("\\bigprod" coq))
+       (?⋃ ("\\bigcup" coq))
+       (?ℕ ("nat" coq))
+       (?∣  ("%|" coq))
+
 ;;;    (?⋂ "\\<intersection\\>"   (,@lispen))
 ;;;    (?⋃ "\\<union\\>"          (,@lispen))
 
        (?∧ ("and"     emacs-lisp lisp python)
-           ("&&" haskell c c++ java perl))
+           ("&&" haskell c c++ java perl coq))
        (?∨ ("or"      emacs-lisp lisp python)
-           ("||" haskell c c++ java perl))
+           ("||" haskell c c++ java perl coq))
        (?¬ ("not" python lisp emacs-lisp haskell)
-           ("!" c c++ java))
+           ("!" c c++ java)
+           ("~~" coq))
+       (?⊻ ("(+)" coq))
        (?∀ ("all" python)
-           ("forall" haskell))
-       (?∃ ("any" python))
+           ("forall" haskell coq)
+           ("\\forall" latex))
+       (?∃ ("any" python)
+           ("exists" coq)
+           ("\\exists" latex))
+       (?⊂ ("\\proper" coq)
+           ("\\subset" latex))
+       (?⊆ ("\\subset" coq)
+           ("\\subseteq" latex))
+       (?∖ (":\\:" coq)
+           ("\\setminus" latex))
+       (?⋊ ("><|" coq))
 ;;;    (?∧ ("\\<And\\>"     emacs-lisp lisp python)
 ;;;        ("\\<andalso\\>" sml)
 ;;;        ("&&"            c c++ perl haskell))
@@ -273,7 +317,7 @@ relevant buffer(s)."
 
 (defun pretty-regexp (regexp glyph)
   "Replace REGEXP with GLYPH in buffer."
-  (interactive "MRegexp to replace: 
+  (interactive "MRegexp to replace:
 MCharacter to replace with: ")
   (pretty-add-keywords nil `((,regexp . ,(string-to-char glyph))))
   (font-lock-fontify-buffer))
