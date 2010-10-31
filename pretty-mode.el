@@ -23,24 +23,28 @@
 (eval-when-compile
   (require 'cl))
 
-(defvar pretty-syntax-types '(?_ ?w))
+(defvar pretty-syntax-types '(?_ ?w ?\\))
 
 ;; modified from `sml-mode'
 (defun pretty-font-lock-compose-symbol (alist)
   "Compose a sequence of ascii chars into a symbol."
+  ;; Check that the chars should really be composed into a symbol.
   (let* ((start (match-beginning 0))
          (end (match-end 0))
          (syntax (char-syntax (char-after start))))
     (if (or (if (memq syntax pretty-syntax-types)
-                (or (memq (char-syntax (char-before start)) pretty-syntax-types)
-                    (memq (char-syntax (char-after end)) pretty-syntax-types))
-              (memq (char-syntax (char-before start)) '(?. ?\\)))
-            (memq (get-text-property start 'face)
-                  '(font-lock-doc-face font-lock-string-face
-                                       font-lock-comment-face)))
+               (or (memq (char-syntax (char-before start)) pretty-syntax-types)
+                  (memq (char-syntax (char-after end)) pretty-syntax-types))
+             (memq (char-syntax (char-before start)) '(?. ?\\)))
+           (memq (get-text-property start 'face)
+                 '(font-lock-doc-face font-lock-string-face
+                                      font-lock-comment-face)))
+        ;; No composition for you. Let's actually remove any composition
+        ;; we may have added earlier and which is now incorrect.
         (remove-text-properties start end '(composition))
+      ;; That's a symbol alright, so add the composition.
       (compose-region start end (cdr (assoc (match-string 0) alist)))
-;;;       (add-text-properties start end `(display ,repl)))
+;;;       (add-text-properties start end `(display ,repl))
       ))
   ;; Return nil because we're not adding any face property.
   nil)
