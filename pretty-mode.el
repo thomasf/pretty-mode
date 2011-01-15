@@ -146,7 +146,7 @@ expected by `pretty-patterns'"
   (let* ((lispy '(scheme emacs-lisp lisp))
          (mley '(tuareg haskell sml coq))
          (c-like '(c c++ perl sh python java ess ruby))
-         (all (append lispy mley c-like '(octave latex))))
+         (all `(,@lispy ,@mley ,@c-like octave latex)))
     (pretty-compile-patterns
      `(
        (?≠ ("!=" ,@c-like scheme octave coq)
@@ -180,13 +180,7 @@ expected by `pretty-patterns'"
        (?… ("\.\.\." scheme)
            ("\.\." haskell)
            ("\\ldots" latex))
-;;;    (?∀ ("List.for_all" tuareg))
-;;;    (?∃ ("List.exists" tuareg))
-;;;    (?∈ ("List.mem" tuareg)
-;;;        ("member" ,@lispy))
-;;;    (?∉ ())
-       (?∈ ("in" python)
-           ("\\in" coq latex))
+       (?∈ ("in" python))
        (?∉ ("not in" python)
            ("\\notin" coq latex))
        (?⊲ ("<|" coq))
@@ -216,7 +210,6 @@ expected by `pretty-patterns'"
        (?θ ("theta" ,@all)
            ("\\theta" latex))
        (?λ ("lambda" ,@all)
-;;;        ("case-\\(lambda\\)" scheme)
            ("fn" sml)
            ("fun" tuareg)
            ("\\" haskell)
@@ -247,37 +240,10 @@ expected by `pretty-patterns'"
        (?ⁿ ("**n" python tuareg octave)
            ("^n" octave haskell coq))
 
-    ;; (?₀ ("[0]" ,@c-like)
-    ;;     ("(0)" octave)
-    ;;     (".(0)" tuareg))
-    ;; (?₁ ("[1]" ,@c-like)
-    ;;     ("(1)" octave)
-    ;;     (".(1)" tuareg))
-    ;; (?₂ ("[2]" ,@c-like)
-    ;;     ("(2)" octave)
-    ;;     (".(2)" tuareg))
-    ;; (?₃ ("[3]" ,@c-like)
-    ;;     ("(3)" octave)
-    ;;     (".(3)" tuareg))
-    ;; (?₄ ("[4]" ,@c-like)
-    ;;     ("(4)" octave)
-    ;;     (".(4)" tuareg))
-
        (?∞ ("HUGE_VAL" c c++))
        (?∎ ("Qed." coq))
 
-;;;    (?∙ ())
-;;;    (?× ())
        (?∙ ("*" python haskell))
-;;;    (?ₐ ("[a]" ,@c-like)
-;;;        ("(a)" octave))
-;;;    (?ₓ ("[x]" ,@c-like)
-;;;        ("(x)" octave))
-;;;    (?₅ ("[5]") ,@c-like)
-;;;    (?₆ ("[6]") ,@c-like)
-;;;    (?₇ ("[7]") ,@c-like)
-;;;    (?₈ ("[8]") ,@c-like)
-;;;    (?₉ ("[9]") ,@c-like)
 
        (?⋂ ("\\bigcap" coq))
        (?∏ ("\\prod" coq))
@@ -285,10 +251,7 @@ expected by `pretty-patterns'"
        (?ℕ ("nat" coq))
        (?∣  ("%|" coq))
 
-;;;    (?⋂ "\\<intersection\\>"   (,@lispen))
-;;;    (?⋃ "\\<union\\>"          (,@lispen))
-
-       (?∧ ("and"     emacs-lisp lisp python)
+       (?∧ ("and" emacs-lisp lisp python)
            ("&&" haskell c c++ java perl coq)
            ("\\wedge" latex)
            ("\\land" latex))
@@ -317,17 +280,7 @@ expected by `pretty-patterns'"
        (?〈 ("\\langle" latex))
        (?〉 ("\\rangle" latex))
        (?≻ ("\\succ" latex))
-       (?≺ ("\\prec" latex))
-;;;    (?∧ ("\\<And\\>"     emacs-lisp lisp python)
-;;;        ("\\<andalso\\>" sml)
-;;;        ("&&"            c c++ perl haskell))
-;;;    (?∨ ("\\<or\\>"      emacs-lisp lisp)
-;;;        ("\\<orelse\\>"  sml)
-;;;        ("||"            c c++ perl haskell))
-;;;    (?¬ ("\\<!\\>"       c c++ perl sh)
-;;;        ("\\<not\\>"     lisp emacs-lisp scheme haskell sml))
-
-       )))
+       (?≺ ("\\prec" latex)))))
     "*List of pretty patterns.
 
 Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
@@ -355,8 +308,5 @@ relevant buffer(s)."
 MCharacter to replace with: ")
   (pretty-add-keywords nil `((,regexp . ,(string-to-char glyph))))
   (font-lock-fontify-buffer))
-
-
-
 
 (provide 'pretty-mode)
