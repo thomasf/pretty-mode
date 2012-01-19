@@ -24,6 +24,9 @@
   (require 'cl))
 
 (defvar pretty-syntax-types '(?_ ?w ?\\))
+(defvar pretty-current-point 1)
+(defvar pretty-current-line-beginning 1)
+(defvar pretty-current-line-end 1)
 
 ;; modified from `sml-mode'
 (defun pretty-font-lock-compose-symbol (alist)
@@ -32,16 +35,17 @@
   (let* ((start (match-beginning 0))
          (end (match-end 0))
          (syntax (char-syntax (char-after start))))
-    (if (or (if (memq syntax pretty-syntax-types)
+    (if (or (and (< pretty-current-line-beginning start) (> pretty-current-line-end end))
+           (or (if (memq syntax pretty-syntax-types)
                (or (memq (char-syntax (char-before start)) pretty-syntax-types)
                   (memq (char-syntax (char-after end)) pretty-syntax-types))
              (memq (char-syntax (char-before start)) '(?. ?\\)))
            (memq (get-text-property start 'face)
                  '(font-lock-doc-face font-lock-string-face
-                                      font-lock-comment-face)))
+                                      font-lock-comment-face))))
         ;; No composition for you. Let's actually remove any composition
         ;; we may have added earlier and which is now incorrect.
-        (remove-text-properties start end '(composition))
+        (decompose-region start end)
       ;; That's a symbol alright, so add the composition.
       (compose-region start end (cdr (assoc (match-string 0) alist)))
 ;;;       (add-text-properties start end `(display ,repl))
@@ -86,6 +90,19 @@ MODE is nil. Return nil if there are no keywords."
 (defgroup pretty nil "Minor mode for replacing text with symbols "
   :group 'faces)
 
+(defun pretty-line-update ()
+  "Decompose current line"
+  (setq pretty-current-point (point))
+  (setq pretty-current-line-beginning (line-beginning-position))
+  (setq pretty-current-line-end (line-end-position))
+  (font-lock-fontify-buffer))
+  ;; (save-excursion
+    ;; (font-lock-fontify-region (point-min) (line-beginning-position))
+    ;; (font-lock-fontify-region (line-end-position) (point-max))
+    ;; (remove-text-properties (line-beginning-position) (line-end-position) '(composition))
+;; ))
+    ;; (remove-text-properties (point) (min (+ (point) 10) (point-max)) '(composition))))
+
 (define-minor-mode pretty-mode
   "Toggle Pretty minor mode.
 With arg, turn Pretty minor mode on if arg is positive, off otherwise.
@@ -95,10 +112,13 @@ keywords, it replaces them with symbols. For example, lambda is
 displayed as λ in lisp modes."
   :group 'pretty
   :lighter " λ"
+  
   (if pretty-mode
       (progn
+        (add-hook 'post-command-hook 'pretty-line-update nil t)
         (font-lock-add-keywords nil (pretty-keywords) t)
         (font-lock-fontify-buffer))
+    (remove-hook 'post-command-hook 'pretty-line-update t)
     (font-lock-remove-keywords nil (pretty-keywords))
     (remove-text-properties (point-min) (point-max) '(composition nil))))
 
@@ -158,7 +178,8 @@ expected by `pretty-patterns'"
            ("\\leq" latex))
        (?≥ (">=" ,@all)
            ("\\geq" latex))
-       (?≡ ("\\equiv" latex))
+       (?≡ ("==" ,@all)
+           ("\\equiv" latex))
        (?⟵ ("<-" ,@mley ess)
            ("\\leftarrow" latex))
        (?⟶ ("->" ,@mley ess c c++ perl)
@@ -239,16 +260,23 @@ expected by `pretty-patterns'"
            ("\\eta" latex))
 
        (?² ("**2" python tuareg octave)
+           ("** 2" python tuareg octave)
            ("^2" octave haskell))
        (?³ ("**3" python tuareg octave)
+           ("** 3" python tuareg octave)
            ("^3" octave haskell))
        (?ⁿ ("**n" python tuareg octave)
+           ("** n" python tuareg octave)
            ("^n" octave haskell coq))
 
        (?∞ ("HUGE_VAL" c c++))
        (?∎ ("Qed." coq))
 
        (?∙ ("*" python haskell))
+
+       (?∗ ("all" python))
+       (?⊢ ("assert" python))
+       (?≍ ("is" python))
 
        (?⋂ ("\\bigcap" coq)
            ("\\cap" latex))
@@ -276,9 +304,10 @@ expected by `pretty-patterns'"
            ("~~" coq)
            ("\\neg" latex))
        (?⊻ ("(+)" coq))
-       (?∀ ("all" python)
+       (?∀ ("for" python)
            ("forall" haskell coq)
            ("\\forall" latex))
+       (?∄ ("not any" python))
        (?∃ ("any" python)
            ("exists" coq)
            ("\\exists" latex))
