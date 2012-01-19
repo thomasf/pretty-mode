@@ -35,7 +35,7 @@
   (let* ((start (match-beginning 0))
          (end (match-end 0))
          (syntax (char-syntax (char-after start))))
-    (if (or (and (< pretty-current-line-beginning start) (> pretty-current-line-end end))
+    (if (or (and (<= pretty-current-line-beginning start) (>= pretty-current-line-end end))
            (or (if (memq syntax pretty-syntax-types)
                (or (memq (char-syntax (char-before start)) pretty-syntax-types)
                   (memq (char-syntax (char-after end)) pretty-syntax-types))
@@ -45,13 +45,13 @@
                                       font-lock-comment-face))))
         ;; No composition for you. Let's actually remove any composition
         ;; we may have added earlier and which is now incorrect.
-        (decompose-region start end)
+        (prog1
+            nil
+          (decompose-region start end))
       ;; That's a symbol alright, so add the composition.
-      (compose-region start end (cdr (assoc (match-string 0) alist)))
-;;;       (add-text-properties start end `(display ,repl))
-      ))
-  ;; Return nil because we're not adding any face property.
-  nil)
+      (prog1
+          font-lock-negation-char-face ;; Return a rarely use font-face
+        (compose-region start end (cdr (assoc (match-string 0) alist)))))))
 
 (defvar pretty-interaction-mode-alist
   '((inferior-scheme-mode . scheme-mode)
@@ -72,9 +72,11 @@
 regular expressions with symbols. ALIST has the form ((STRING .
 REPLACE-CHAR) ...)."
   (when alist
-    `((,(regexp-opt (mapcar 'car alist))
-       (0 (pretty-font-lock-compose-symbol
-           ',alist))))))
+    (let ((rxes (mapcar 'car alist)))
+      `((
+         ,(rx-to-string `(or ,@rxes))
+         (0 (pretty-font-lock-compose-symbol
+             ',alist)))))))
 
 (defun pretty-keywords (&optional mode)
   "Return the font-lock keywords for MODE, or the current mode if
@@ -96,12 +98,6 @@ MODE is nil. Return nil if there are no keywords."
   (setq pretty-current-line-beginning (line-beginning-position))
   (setq pretty-current-line-end (line-end-position))
   (font-lock-fontify-buffer))
-  ;; (save-excursion
-    ;; (font-lock-fontify-region (point-min) (line-beginning-position))
-    ;; (font-lock-fontify-region (line-end-position) (point-max))
-    ;; (remove-text-properties (line-beginning-position) (line-end-position) '(composition))
-;; ))
-    ;; (remove-text-properties (point) (min (+ (point) 10) (point-max)) '(composition))))
 
 (define-minor-mode pretty-mode
   "Toggle Pretty minor mode.
@@ -116,11 +112,12 @@ displayed as λ in lisp modes."
   (if pretty-mode
       (progn
         (add-hook 'post-command-hook 'pretty-line-update nil t)
-        (font-lock-add-keywords nil (pretty-keywords) t)
+        (font-lock-add-keywords nil (pretty-keywords))
         (font-lock-fontify-buffer))
     (remove-hook 'post-command-hook 'pretty-line-update t)
     (font-lock-remove-keywords nil (pretty-keywords))
-    (remove-text-properties (point-min) (point-max) '(composition nil))))
+    (remove-text-properties (point-min) (point-max) '(composition nil))
+    (font-lock-fontify-buffer)))
 
 (defun turn-on-pretty-if-desired ()
   "Turn on `pretty-mode' if the current major mode supports it."
@@ -162,7 +159,11 @@ expected by `pretty-patterns'"
                                 pretty-patterns))))))
     pretty-patterns))
 
-(defvar pretty-patterns
+(defvar pretty-patterns nil
+"*List of pretty patterns.
+
+Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
+(setq pretty-patterns
   (let* ((lispy '(scheme emacs-lisp lisp))
          (mley '(tuareg haskell sml coq))
          (c-like '(c c++ perl sh python java ess ruby))
@@ -259,14 +260,11 @@ expected by `pretty-patterns'"
        (?η ("eta" ,@all)
            ("\\eta" latex))
 
-       (?² ("**2" python tuareg octave)
-           ("** 2" python tuareg octave)
+       (?² (" ?** ?2" python tuareg octave)
            ("^2" octave haskell))
-       (?³ ("**3" python tuareg octave)
-           ("** 3" python tuareg octave)
+       (?³ (" ?** ?3" python tuareg octave)
            ("^3" octave haskell))
-       (?ⁿ ("**n" python tuareg octave)
-           ("** n" python tuareg octave)
+       (?ⁿ (" ?** ?n" python tuareg octave)
            ("^n" octave haskell coq))
 
        (?∞ ("HUGE_VAL" c c++))
@@ -277,6 +275,8 @@ expected by `pretty-patterns'"
        (?∗ ("all" python))
        (?⊢ ("assert" python))
        (?≍ ("is" python))
+       (?𝝈 ("filter" python))
+       (?𝚷 ("map" python))
 
        (?⋂ ("\\bigcap" coq)
            ("\\cap" latex))
@@ -287,9 +287,6 @@ expected by `pretty-patterns'"
        (?ℕ ("nat" coq))
        (?∣  ("%|" coq))
 
-;;;    (?⋂ "\\<intersection\\>"   (,@lispen))
-;;;    (?⋃ "\\<union\\>"          (,@lispen))
-
        (?∧ ("and"     emacs-lisp lisp python)
            ("&&" haskell c c++ java perl coq)
            ("\\wedge" latex)
@@ -299,7 +296,7 @@ expected by `pretty-patterns'"
            ("\\vee" latex)
            ("\\lor" latex))
 
-       (?¬ ("not" python lisp emacs-lisp haskell)
+       (?¬ ("not ?" python lisp emacs-lisp haskell)
            ("!" c c++ java)
            ("~~" coq)
            ("\\neg" latex))
@@ -323,18 +320,7 @@ expected by `pretty-patterns'"
        (?〈 ("\\langle" latex))
        (?〉 ("\\rangle" latex))
        (?≻ ("\\succ" latex))
-       (?≺ ("\\prec" latex)))))
-;;;    (?∧ ("\\<And\\>"     emacs-lisp lisp python)
-;;;        ("\\<andalso\\>" sml)
-;;;        ("&&"            c c++ perl haskell))
-;;;    (?∨ ("\\<or\\>"      emacs-lisp lisp)
-;;;        ("\\<orelse\\>"  sml)
-;;;        ("||"            c c++ perl haskell))
-;;;    (?¬ ("\\<!\\>"       c c++ perl sh)
-;;;        ("\\<not\\>"     lisp emacs-lisp scheme haskell sml))
-    "*List of pretty patterns.
-
-Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
+       (?≺ ("\\prec" latex))))))
 
 
 (defun pretty-add-keywords (mode keywords)
