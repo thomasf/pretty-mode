@@ -47,10 +47,10 @@
          (or
           (if (memq syntax pretty-syntax-types)
                 (or
-                 (and 
+                 (and
                     (memq (char-syntax (aref match 0)) pretty-syntax-types)
                     (memq (char-syntax (char-before start)) pretty-syntax-types))
-                 (and 
+                 (and
                     (memq (char-syntax (aref match (- (length match) 1))) pretty-syntax-types)
                    (memq (char-syntax (char-after end)) pretty-syntax-types)))
               (memq (char-syntax (char-before start)) '(?. ?\\)))
@@ -124,7 +124,7 @@ keywords, it replaces them with symbols. For example, lambda is
 displayed as λ in lisp modes."
   :group 'pretty
   :lighter " λ"
-  
+
   (if pretty-mode
       (progn
         (add-hook 'post-command-hook 'pretty-line-update nil t)
@@ -180,13 +180,13 @@ expected by `pretty-patterns'"
 Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
 
 (setq pretty-patterns
-  (let* ((lispy '(scheme emacs-lisp lisp))
+  (let* ((lispy '(scheme emacs-lisp lisp clojure))
          (mley '(tuareg haskell sml coq))
          (c-like '(c c++ perl sh python java ess ruby))
          (all `(,@lispy ,@mley ,@c-like octave latex)))
     (pretty-compile-patterns
      `(
-       (?¬ (,(rx "not" (? white)) python lisp emacs-lisp haskell)
+       (?¬ (,(rx "not" (? white)) python ,@lispy haskell)
            (,(rx "!") c c++ java)
            (,(rx "~~") coq)
            (,(rx "\\neg") latex))
@@ -194,7 +194,8 @@ Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
            (,(rx "<>") tuareg octave)
            (,(rx "~=") octave)
            (,(rx "/=") haskell emacs-lisp)
-           (,(rx "\\neq") latex))
+           (,(rx "\\neq") latex)
+           (,(rx "not=") clojure))
        (?≺ (,(rx "<") ,@all)
            (,(rx "\\prec") latex))
        (?≻ (,(rx ">") ,@all)
@@ -217,16 +218,17 @@ Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
        (?ⁿ (,(rx (? white) "**" (? white) "n") python tuareg octave)
            (,(rx "^n") octave haskell coq))
 
-       (?∧ (,(rx "and") emacs-lisp lisp python)
+       (?∧ (,(rx "and") emacs-lisp lisp clojure python)
            (,(rx "&&") haskell c c++ java perl coq)
            (,(rx "\\wedge") latex)
            (,(rx "\\land") latex))
-       (?∨ (,(rx "or") emacs-lisp lisp python)
+       (?∨ (,(rx "or") emacs-lisp lisp clojure python)
            (,(rx "||") haskell c c++ java perl coq)
            (,(rx "\\vee") latex)
            (,(rx "\\lor") latex))
 
        (?≡ (,(rx "==") ,@all)
+           (,(rx "=") clojure)
            (,(rx "\\equiv") latex))
        (?⟵ (,(rx "<-") ,@mley ess)
            (,(rx "\\leftarrow") latex))
@@ -240,7 +242,7 @@ Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
            (,(rx "\leftrightarrow") latex))
        (?↣ (,(rx ">->") coq))
        (?↦ (,(rx "\\mapsto") latex))
-       (?∅ (,(rx "nil") emacs-lisp ruby)
+       (?∅ (,(rx "nil") emacs-lisp clojure ruby)
            (,(rx "null") scheme java)
            (,(rx "NULL") c c++)
            (,(rx "None") python)
