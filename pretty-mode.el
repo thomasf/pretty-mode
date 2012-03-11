@@ -206,7 +206,7 @@ Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
            (,(rx "\\geq") latex))
 
        (?× (,(rx "*") ,@all))
-       (?÷ (,(rx "/") ,@all))
+       (?÷ (,(rx "/[^*/]") ,@all))
        (?− (,(rx "-") ,@all))
        (?+ (,(rx "+") ,@all))
        (?⁑ (,(rx "**") python))
