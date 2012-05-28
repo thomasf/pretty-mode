@@ -205,7 +205,7 @@ Should be a list of the form ((MODE ((REGEXP . GLYPH) ...)) ...)")
        (?≽ (,(rx ">=") ,@all)
            (,(rx "\\geq") latex))
 
-       (?× (,(rx "*") ,@all))
+       (?× (,(rx "*[^[:alpha:]]") ,@all))
        (?÷ (,(rx "/[^*/]") ,@all))
        (?− (,(rx "-") ,@all))
        (?+ (,(rx "+") ,@all))
