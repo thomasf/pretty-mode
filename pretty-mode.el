@@ -29,6 +29,12 @@
 (defvar pretty-current-line-beginning 1)
 (defvar pretty-current-line-end 1)
 
+(defvar pretty-mode-symbol-face 'pretty-mode-symbol-face)
+(defface pretty-mode-symbol-face
+  '((t :inherit font-lock-negation-char-face))
+  "Default symbol face"
+  :group 'pretty-mode)
+
 ;; modified from `sml-mode'
 (defun pretty-font-lock-compose-symbol (alist)
   "Compose a sequence of ascii chars into a symbol."
@@ -64,7 +70,7 @@
           (decompose-region start end))
       ;; That's a symbol alright, so add the composition.
       (prog1
-          font-lock-negation-char-face ;; Return a rarely use font-face
+          pretty-mode-symbol-face
         (let ((chr nil))
           (loop for (regexp . char) in alist do
                 (when (string-match (concat "^" regexp "$") match)
